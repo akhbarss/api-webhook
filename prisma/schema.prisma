@@ -126,9 +126,9 @@ model WebhookLog {
   code      Int
   timestamp Int?
 
-  shopId    String?
+  shopId    Int?
   msgId     String?
-  partnerId String?
+  partnerId Int?
   data      Json
 }
 
