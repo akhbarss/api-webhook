@@ -1,0 +1,25 @@
+# Node & build outputs
+node_modules
+dist
+npm-debug.log
+yarn-error.log
+
+# Env & secrets
+.env
+.env.*.local
+
+# Docker & Compose
+Dockerfile
+docker-compose.yml
+
+# Logs
+*.log
+logs
+*.pid
+*.seed
+
+# OS / Editor junk
+.DS_Store
+.vscode
+.idea
+*.swp
