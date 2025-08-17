@@ -2,6 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import { prisma } from '../prisma';
 import { verifyPushMsg } from '../utils/verifyPush';
 import { PATH_URL_WEBHOOK, SHOPEE_LIVE_PUSH_PARTNER_KEY } from '../config';
+import { handleWebhookByCode } from '../controller/webhook.controller';
 
 const router = Router();
 
@@ -20,6 +21,9 @@ router.post(
         const body = req.body; // pakai rawBody, bukan req.body
         const rawBody = (req as any).rawBody; // pakai rawBody, bukan req.body
         const authorization = req.headers["authorization"] || "";
+        console.log({ body })
+        console.log({ rawBody })
+        console.log({ authorization })
 
         const isValid = verifyPushMsg(url, rawBody, SHOPEE_LIVE_PUSH_PARTNER_KEY, authorization);
 
@@ -27,32 +31,32 @@ router.post(
             console.error("❌ Invalid signature");
             return res.status(201).send(false);
         }
-        if (body.code == 0) {
-            await prisma.webhookLog.create({
-                data: {
-                    shopId: "TEST VERIFY",
-                    code: body.code,
-                    msgId: "TEST VERIFY",
-                    data: body, // simpan JSON full push dari Shopee
-                },
-            });
-        } else {
+        // if (body.code == 0) {
+        //     await prisma.webhookLog.create({
+        //         data: {
+        //             shopId: "TEST VERIFY",
+        //             code: body.code,
+        //             msgId: "TEST VERIFY",
+        //             data: body, // simpan JSON full push dari Shopee
+        //         },
+        //     });
+        // } else if (body.code == 3) {
 
-            await prisma.webhookLog.create({
-                data: {
-                    shopId: String(body.shop_id),
-                    code: body.code,
-                    msgId: body.msg_id,
-                    data: body, // simpan JSON full push dari Shopee
-                },
-            });
+
+        // }
+
+
+        try {
+            // Lempar ke controller
+            await handleWebhookByCode(body);
+            res.status(200).json({ success: true });
+        } catch (err) {
+            console.error('❌ Error handling webhook:', err);
+            res.status(500).json({ success: false, error: (err as Error).message });
         }
-
-
-        console.log("✅ Push message verified:", req.body);
-        res.status(200).json({ success: true })
     }
-);
+)
+
 
 
 

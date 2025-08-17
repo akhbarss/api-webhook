@@ -22,7 +22,21 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  shops Shop[]
+  shopsHistory ShopHistory[]
+  shops        Shop[]
+}
+
+model ShopHistory {
+  id          Int      @id @default(autoincrement())
+  shopId      Int      @unique // ID toko dari Shopee
+  userId      Int
+  shopName    String
+  shopLogo    String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Shop {
@@ -52,11 +66,49 @@ model Token {
   shop Shop @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
 }
 
+enum ShopeeStatus {
+  UNPAID
+  READY_TO_SHIP
+  PROCESSED
+  SHIPPED
+  TO_CONFIRM_RECEIVE
+  COMPLETED
+  RETRY_SHIP
+  IN_CANCEL
+  CANCELLED
+  TO_RETURN
+}
+
+enum AppStatus {
+  BELUM_BAYAR
+  PERLU_DIPROSES
+  TELAH_DIPROSES
+  DIKIRIM
+  MENUNGGU_KONFIRMASI
+  SELESAI
+  KIRIM_ULANG
+  DALAM_PEMBATALAN
+  DIBATALKAN
+  SEDANG_RETUR
+}
+
+enum PackageStatus {
+  PENDING // 1
+  TO_PROCESS // 2
+  PROCESSED // 3
+}
+
 model Order {
-  id      Int    @id @default(autoincrement())
-  orderSn String @unique // 'order_sn' dari Shopee
-  status  String // Status pesanan, contoh: "PROCESSED", "SHIPPED"
-  rawData Json? // Opsional: Simpan seluruh payload asli untuk referensi
+  id             Int            @id @default(autoincrement())
+  orderSn        String         @unique // 'order_sn' dari Shopee
+  shopee_status  ShopeeStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
+  app_status     AppStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
+  package_status PackageStatus?
+  rawData        Json? // Opsional: Simpan seluruh payload asli untuk referensi
+
+  forder_id      String?
+  package_number String?
+  tracking_no    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,11 +118,208 @@ model Order {
   shop   Shop @relation(fields: [shopId], references: [shopId])
 }
 
+// ############################ ORDER PUSH
+
 model WebhookLog {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  shopId    String
   code      Int
-  msgId     String
-  data    Json
+  timestamp Int?
+
+  shopId    String?
+  msgId     String?
+  partnerId String?
+  data      Json
+}
+
+// 3
+model OrderStatusLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+  shopId    Int?
+
+  ordersn            String?
+  status             String?
+  completed_scenario String?
+  update_time        Int?
+}
+
+// 4
+model OrderTrackingLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+  shopId    Int?
+
+  ordersn        String?
+  forder_id      String?
+  package_number String?
+  tracking_no    String?
+}
+
+// 15
+model ShippingDocumentStatusLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+  shopId    Int?
+
+  ordersn        String?
+  package_number String?
+  status         String?
+}
+
+// 23
+model BookingStatusPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shopId    Int?
+  code      Int
+  timestamp Int?
+
+  bookingSn     String?
+  bookingStatus String?
+  updateTime    String?
+}
+
+// 24
+model BookingTrackingNoPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shopId    Int?
+  code      Int
+  timestamp Int?
+
+  bookingSn      String?
+  trackingNumber String?
+}
+
+// 25
+model BookingShippingDocumentStatusPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shopId    Int?
+  code      Int
+  timestamp Int?
+
+  bookingSn String?
+  status    String?
+}
+
+// 30
+model PackageFulfilmentStatusPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shopId    Int?
+  code      Int
+  timestamp Int?
+
+  ordersn          String?
+  package_number   String?
+  fulfilmentStatus String?
+  updateTime       String?
+}
+
+// 37
+model CourierDeliveryBindingStatusPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shopId    Int?
+  code      Int
+  timestamp Int?
+
+  binding_id                 String?
+  first_mile_tracking_number String?
+  status                     String?
+  update_time                Int?
+}
+
+// ############################ SHOPEE PUSH✅
+
+// open_api_authorization_expiry 12
+model OpenApiAuthorizationExp {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+
+  merchant_expire_soon Json?
+  shop_expire_soon     Json?
+  expire_before        Int?
+  page_no              Int?
+  total_page           Int?
+}
+
+// shop_authorization_push 1
+model ShopAuthorizationPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+
+  shop_id          Int?
+  shop_id_list     Json?
+  merchant_id      Int?
+  merchant_id_list Json?
+  authorize_type   String?
+  extra            String?
+  main_account_id  Int?
+  success          Int?
+}
+
+// shop_authorization_canceled_push 2
+model ShopAuthorizationCanceledPush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  code      Int
+  timestamp Int?
+
+  shop_id          Int?
+  shop_id_list     Json?
+  merchant_id      Int?
+  merchant_id_list Json?
+  authorize_type   String?
+  extra            String?
+  main_account_id  Int?
+  success          Int?
+}
+
+// ############################ PRODUK PUSH✅
+
+// reserved_stock_change_push
+model ReservedStockChangePush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shop_id   Int?
+  code      Int
+  timestamp Int?
+
+  item_id        Int?
+  variation_id   Int?
+  changed_values Json?
+  promotion_type String?
+  promotion_id   Int?
+  action         String?
+  ordersn        String?
+  update_time    Int?
+}
+
+// item_price_update_push
+model ItemPriceUpdatePush {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  shop_id   Int?
+  code      Int
+  timestamp Int?
+
+  item_id      Int?
+  model_id     Int?
+  update_field String?
+  old_value    Int?
+  new_value    Int?
+  update_time  Int?
 }
