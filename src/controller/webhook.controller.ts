@@ -61,7 +61,7 @@ export async function handleWebhookByCode(body: any) {
         data: {
             code,
             timestamp: timestamp || null,
-            shopId: shop_id ? String(shop_id) : null,
+            shopId: shop_id ? shop_id : null,
             msgId: msg_id || null,
             partnerId: partner_id || null,
             data: body, // simpan JSON full
