@@ -1,0 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config()
+const SHOPEE_LIVE_PUSH_PARTNER_KEY = process.env.SHOPEE_LIVE_PUSH_PARTNER_KEY ?? "";
+const SHOPEE_TEST_PUSH_PARTNER_KEY = process.env.SHOPEE_TEST_PUSH_PARTNER_KEY ?? "";
+const PATH_URL_WEBHOOK = process.env.PATH_URL_WEBHOOK ?? "";
+
+export { SHOPEE_LIVE_PUSH_PARTNER_KEY, SHOPEE_TEST_PUSH_PARTNER_KEY, PATH_URL_WEBHOOK };
+
