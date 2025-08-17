@@ -2,30 +2,29 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package.json & package-lock.json
+# Copy deps dan install
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Generate Prisma Client
-RUN npx prisma generate
-
-# Copy source code
+# Copy source code (termasuk prisma/schema.prisma)
 COPY . .
+
+# Generate Prisma Client setelah schema ada
+RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
+
 
 # ---- Runtime stage ----
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy hanya yang dibutuhkan dari builder
+# Copy hasil build & deps dari builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package*.json ./ 
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
