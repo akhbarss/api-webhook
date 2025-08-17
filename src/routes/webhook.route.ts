@@ -40,7 +40,7 @@ router.post(
 
             await prisma.webhookLog.create({
                 data: {
-                    shopId: String(body.shopid),
+                    shopId: String(body.shop_id),
                     code: body.code,
                     msgId: body.msg_id,
                     data: body, // simpan JSON full push dari Shopee
