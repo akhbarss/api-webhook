@@ -34,7 +34,7 @@ export const setupMiddleware = (app: express.Application): void => {
     // const timeWIB = formatter.format(new Date());
     console.log(`
       
-     ✅ [${timeWIB}] ${req.method} url:${req.url} baseUrl:${req.baseUrl} originalUrl:${req.originalUrl} - IP: ${req.ip}`);
+     ✅ [${timeWIB}] ${req.method} url:${req.url} baseUrl:${req.baseUrl} originalUrl:${req.originalUrl} - IP: ${req.ip} anjay madappp`);
     next();
   });
 

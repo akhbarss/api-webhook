@@ -260,6 +260,7 @@ model ShopAuthorizationPush {
   createdAt DateTime @default(now())
   code      Int
   timestamp Int?
+  partnerId Int?
 
   shop_id          Int?
   shop_id_list     Json?
@@ -277,6 +278,7 @@ model ShopAuthorizationCanceledPush {
   createdAt DateTime @default(now())
   code      Int
   timestamp Int?
+  partnerId Int?
 
   shop_id          Int?
   shop_id_list     Json?

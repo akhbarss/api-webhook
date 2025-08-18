@@ -144,7 +144,7 @@ export async function handleWebhookByCode(body: any) {
                 },
             });
 
-            
+
             break;
         }
         case 23: {
@@ -277,6 +277,7 @@ export async function handleWebhookByCode(body: any) {
 
             await prisma.shopAuthorizationPush.create({
                 data: {
+                    partnerId: partner_id,
                     code,
                     timestamp,
                     shop_id,
@@ -300,10 +301,12 @@ export async function handleWebhookByCode(body: any) {
                 extra = null,
                 main_account_id = null,
                 success = null,
+                shop_id = null,
             } = body.data || {};
 
             await prisma.shopAuthorizationCanceledPush.create({
                 data: {
+                    partnerId: partner_id,
                     code,
                     timestamp,
                     shop_id,

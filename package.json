@@ -5,6 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
+    "restart": "pm2 restart api-webhook",
+    "deploy": "npx prisma generate && npm run build && npm run restart",
     "dev": "nodemon --exec ts-node src/index.ts",
     "start": "node dist/index.js"
   },
