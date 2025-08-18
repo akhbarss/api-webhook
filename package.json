@@ -8,7 +8,8 @@
     "restart": "pm2 restart api-webhook",
     "deploy": "npx prisma generate && npm run build && npm run restart",
     "dev": "nodemon --exec ts-node src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "git:pull": "git pull && npx prisma generate"
   },
   "keywords": [],
   "author": "",
