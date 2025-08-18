@@ -1,6 +1,6 @@
 import express from "express";
-import { setupMiddleware } from './middleware/app.middleware';
-import { webhookRoute } from './routes/webhook.route';
+import { setupMiddleware } from '../middleware/app.middleware';
+import { webhookRoute } from '../routes/webhook.route';
 
 const app = express();
 setupMiddleware(app)

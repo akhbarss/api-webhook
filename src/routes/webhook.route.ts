@@ -1,7 +1,7 @@
 import express, { Request, Response, Router } from 'express';
-import { prisma } from '../prisma';
+import { prisma } from '../config/prisma';
 import { verifyPushMsg } from '../utils/verifyPush';
-import { PATH_URL_WEBHOOK, SHOPEE_LIVE_PUSH_PARTNER_KEY } from '../config';
+import { PATH_URL_WEBHOOK, SHOPEE_LIVE_PUSH_PARTNER_KEY } from '../config/config';
 import { handleWebhookByCode } from '../controller/webhook.controller';
 
 const router = Router();

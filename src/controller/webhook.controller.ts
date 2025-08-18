@@ -1,5 +1,5 @@
 import { AppStatus, PackageStatus, ShopeeStatus } from '@prisma/client';
-import { prisma } from '../prisma';
+import { prisma } from '../config/prisma';
 
 function mapPackageStatus(value: number): PackageStatus {
     switch (value) {
@@ -47,23 +47,34 @@ function mapShopeeStatusToAppStatus(status: ShopeeStatus): AppStatus {
 }
 
 export async function handleWebhookByCode(body: any) {
-    const {
-        code = null,
-        shop_id = null,
-        msg_id = null,
-        partner_id = null,
-        data = null,
-        timestamp = null,
-    } = body;
-    console.log("🔥🔥🔥🔥🔥🔥🔥", { body })
+    // let code;
+    // const {
+    //     code = null,
+    //     shop_id = null,
+    //     msg_id = null,
+    //     partner_id = null,
+    //     data = null,
+    //     timestamp = null,
+    // } = body;
+
+    const code = body.code + "" ? parseInt(body.code + "") : body?.data.code
+    const shop_id = body?.shop_id || null
+    const msg_id = body?.msg_id || null
+    const partner_id = body?.partner_id || null
+    const data = body?.data || null
+    const timestamp = body?.timestamp || null
+
+    console.log(parseInt(0 + ""))
+    console.log("🔥🔥🔥🔥🔥🔥🔥", { code, body })
+    console.log(JSON.stringify(body.data.shop_id_list))
     // 1. Simpan raw push dulu ke WebhookLog
     await prisma.webhookLog.create({
         data: {
-            code,
-            timestamp: timestamp || null,
+            code: parseInt(code),
+            timestamp: parseInt(timestamp) || null,
             shopId: shop_id ? shop_id : null,
             msgId: msg_id || null,
-            partnerId: partner_id || null,
+            partnerId: parseInt(partner_id) || null,
             data: body, // simpan JSON full
         },
     });
@@ -75,23 +86,30 @@ export async function handleWebhookByCode(body: any) {
         }
 
         // ORDER PUSH✅
+        // ORDER STATUS🔥
         case 3: {
             const { ordersn = null, status, completed_scenario = null, update_time = null }: {
                 ordersn: any, status: ShopeeStatus, completed_scenario: any, update_time: any
             } = body.data || {};
+
+            const isShopIdIsValid = await prisma.shop.findUnique({ where: { shopId: shop_id } })
+            if (!isShopIdIsValid) break
+
             await prisma.orderStatusLog.create({
                 data: {
-                    code,
-                    timestamp,
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
                     ordersn,
                     status,
                     completed_scenario,
                     update_time,
+                    shopId: shop_id
                 },
             });
             const appStatus = mapShopeeStatusToAppStatus(status);
+
             await prisma.order.upsert({
-                where: { orderSn: ordersn },
+                where: { orderSn: ordersn, shopId: shop_id },
                 update: {
                     shopee_status: status,
                     app_status: appStatus
@@ -107,12 +125,20 @@ export async function handleWebhookByCode(body: any) {
             break;
         }
 
+        // ORDER TRACKING_NO🔥
         case 4: {
             const { ordersn = null, forder_id = null, package_number = null, tracking_no = null } = body.data || {};
+
+            const foundOrder = await prisma.order.findUnique({ where: { orderSn: ordersn } })
+            if (!foundOrder) {
+                console.log(`❌ ORDER SN ${ordersn} IS NOT FOUND ❌`)
+                break
+            }
+
             await prisma.orderTrackingLog.create({
                 data: {
-                    code,
-                    timestamp,
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
                     ordersn,
                     forder_id,
                     package_number,
@@ -132,11 +158,16 @@ export async function handleWebhookByCode(body: any) {
         }
         case 15: {
             const { ordersn = null, package_number = null, status = null, } = body.data || {};
+            const foundOrder = await prisma.order.findUnique({ where: { orderSn: ordersn } })
+            if (!foundOrder) {
+                console.log(`❌ ORDER SN ${ordersn} IS NOT FOUND ❌`)
+                break
+            }
 
             await prisma.shippingDocumentStatusLog.create({
                 data: {
-                    code,
-                    timestamp,
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
                     ordersn,
                     shopId: shop_id,
                     package_number,
@@ -157,8 +188,8 @@ export async function handleWebhookByCode(body: any) {
             await prisma.bookingStatusPush.create({
                 data: {
                     shopId: shop_id,
-                    code,
-                    timestamp,
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
                     bookingSn,
                     bookingStatus,
                     updateTime,
@@ -175,8 +206,8 @@ export async function handleWebhookByCode(body: any) {
         //     await prisma.bookingTrackingNoPush.create({
         //         data: {
         //             shopId: shop_id,
-        //             code,
-        //             timestamp,
+        //              code: parseInt(code),
+        //             timestamp: parseInt(timestamp),
         //             bookingSn,
         //             trackingNumber,
         //         },
@@ -192,8 +223,8 @@ export async function handleWebhookByCode(body: any) {
         //     await prisma.bookingShippingDocumentStatusPush.create({
         //         data: {
         //             shopId: shop_id,
-        //             code,
-        //             timestamp,
+        //              code: parseInt(code),
+        //             timestamp: parseInt(timestamp),
         //             bookingSn,
         //             status
         //         },
@@ -211,8 +242,8 @@ export async function handleWebhookByCode(body: any) {
         //     await prisma.packageFulfilmentStatusPush.create({
         //         data: {
         //             shopId: shop_id,
-        //             code,
-        //             timestamp,
+        //              code: parseInt(code),
+        //             timestamp: parseInt(timestamp),
         //             ordersn,
         //             package_number,
         //             fulfilmentStatus,
@@ -232,8 +263,8 @@ export async function handleWebhookByCode(body: any) {
         //     await prisma.courierDeliveryBindingStatusPush.create({
         //         data: {
         //             shopId: shop_id,
-        //             code,
-        //             timestamp,
+        //              code: parseInt(code),
+        //             timestamp: parseInt(timestamp),
         //             binding_id,
         //             first_mile_tracking_number,
         //             status,
@@ -253,8 +284,8 @@ export async function handleWebhookByCode(body: any) {
 
         //     await prisma.openApiAuthorizationExp.create({
         //         data: {
-        //             code,
-        //             timestamp,
+        //              code: parseInt(code),
+        //             timestamp: parseInt(timestamp),
         //             merchant_expire_soon,
         //             shop_expire_soon,
         //             expire_before,
@@ -266,6 +297,7 @@ export async function handleWebhookByCode(body: any) {
         // }
         case 1: {
             const {
+                shop_id = null,
                 shop_id_list = null,
                 merchant_id = null,
                 merchant_id_list = null,
@@ -277,23 +309,24 @@ export async function handleWebhookByCode(body: any) {
 
             await prisma.shopAuthorizationPush.create({
                 data: {
-                    partnerId: partner_id,
-                    code,
-                    timestamp,
-                    shop_id,
+                    partnerId: parseInt(partner_id),
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
+                    shop_id: parseInt(shop_id),
                     shop_id_list,
                     merchant_id,
                     merchant_id_list,
                     authorize_type,
                     extra,
                     main_account_id,
-                    success
+                    success: parseInt(success),
                 },
             });
             break;
         }
         case 2: {
             const {
+                shop_id = null,
                 shop_id_list = null,
                 merchant_id = null,
                 merchant_id_list = null,
@@ -301,22 +334,21 @@ export async function handleWebhookByCode(body: any) {
                 extra = null,
                 main_account_id = null,
                 success = null,
-                shop_id = null,
             } = body.data || {};
 
             await prisma.shopAuthorizationCanceledPush.create({
                 data: {
-                    partnerId: partner_id,
-                    code,
-                    timestamp,
-                    shop_id,
+                    partnerId: parseInt(partner_id),
+                    code: parseInt(code),
+                    timestamp: parseInt(timestamp),
+                    shop_id: parseInt(shop_id),
                     shop_id_list,
                     merchant_id,
                     merchant_id_list,
                     authorize_type,
                     extra,
                     main_account_id,
-                    success,
+                    success: parseInt(success),
                 },
             });
             break;
