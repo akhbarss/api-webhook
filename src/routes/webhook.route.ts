@@ -49,7 +49,8 @@ router.post(
         try {
             // Lempar ke controller
             await handleWebhookByCode(body);
-            res.status(200).json({ success: true });
+            // res.status(200).json({ success: true });
+            res.status(200).json();
         } catch (err) {
             console.error('❌ Error handling webhook:', err);
             res.status(500).json({ success: false, error: (err as Error).message });

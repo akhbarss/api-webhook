@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import moment from 'moment-timezone';
 
 /**
  * Mengatur semua middleware level aplikasi untuk instance Express.
@@ -20,9 +21,20 @@ export const setupMiddleware = (app: express.Application): void => {
   // 3. Middleware logger sederhana untuk setiap request
   app.use((req, res, next) => {
     // Memberikan log untuk setiap request yang masuk untuk memudahkan debugging
+
+    const formatter = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const timeWIB = moment().tz('Asia/Jakarta').format('HH:mm:ss');
+    // console.log(timeWIB);
+    // const timeWIB = formatter.format(new Date());
     console.log(`
       
-     ✅ [${new Date().toLocaleTimeString()}] ${req.method} url:${req.url} baseUrl:${req.baseUrl} originalUrl:${req.originalUrl} - IP: ${req.ip}`);
+     ✅ [${timeWIB}] ${req.method} url:${req.url} baseUrl:${req.baseUrl} originalUrl:${req.originalUrl} - IP: ${req.ip}`);
     next();
   });
 
