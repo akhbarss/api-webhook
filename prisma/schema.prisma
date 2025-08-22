@@ -14,13 +14,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AppStatus {
+  BELUM_BAYAR
+  PERLU_DIPROSES
+  TELAH_DIPROSES
+  DIKIRIM
+  MENUNGGU_KONFIRMASI
+  SELESAI
+  KIRIM_ULANG
+  DALAM_PEMBATALAN
+  DIBATALKAN
+  SEDANG_RETUR
+}
+
+enum ShopeeStatus {
+  UNPAID
+  READY_TO_SHIP
+  PROCESSED
+  SHIPPED
+  TO_CONFIRM_RECEIVE
+  COMPLETED
+  RETRY_SHIP
+  IN_CANCEL
+  CANCELLED
+  TO_RETURN
+}
+
+enum PackageStatus {
+  PENDING // 1
+  TO_PROCESS // 2
+  PROCESSED // 3
+}
+
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  token String?
 
   shopsHistory ShopHistory[]
   shops        Shop[]
@@ -49,9 +83,15 @@ model Shop {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  expire_time        Int?
+  auth_time          Int?
+  region             String?
+  sip_affi_shop_list Json?
+
   user  User    @relation(fields: [userId], references: [id])
   token Token?
   Order Order[]
+  Item  Item[]
 }
 
 model Token {
@@ -66,56 +106,163 @@ model Token {
   shop Shop @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
 }
 
-enum ShopeeStatus {
-  UNPAID
-  READY_TO_SHIP
-  PROCESSED
-  SHIPPED
-  TO_CONFIRM_RECEIVE
-  COMPLETED
-  RETRY_SHIP
-  IN_CANCEL
-  CANCELLED
-  TO_RETURN
-}
-
-enum AppStatus {
-  BELUM_BAYAR
-  PERLU_DIPROSES
-  TELAH_DIPROSES
-  DIKIRIM
-  MENUNGGU_KONFIRMASI
-  SELESAI
-  KIRIM_ULANG
-  DALAM_PEMBATALAN
-  DIBATALKAN
-  SEDANG_RETUR
-}
-
-enum PackageStatus {
-  PENDING // 1
-  TO_PROCESS // 2
-  PROCESSED // 3
-}
-
 model Order {
-  id             Int            @id @default(autoincrement())
-  orderSn        String         @unique // 'order_sn' dari Shopee
-  shopee_status  ShopeeStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
-  app_status     AppStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
-  package_status PackageStatus?
-  rawData        Json? // Opsional: Simpan seluruh payload asli untuk referensi
+  id            Int          @id @default(autoincrement())
+  orderSn       String       @unique // 'order_sn' dari Shopee
+  shopee_status ShopeeStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
+  app_status    AppStatus // Status pesanan, contoh: "PROCESSED", "SHIPPED"
 
-  forder_id      String?
-  package_number String?
-  tracking_no    String?
+  tracking_no             String? @unique // 'order_sn' dari Shopee
+  // package_status          PackageStatus?
+  rawData                 Json? // Opsional: Simpan seluruh payload asli untuk referensi
+  forder_id               String?
+  package_number          String?
+  update_time             Int?
+  is_printed              Boolean @default(false)
+  is_procesed_by_merchant Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // 
+  actual_shipping_fee_confirmed Boolean?
+  advance_package               Boolean?
+  booking_sn                    String?
+  buyer_cancel_reason           String?
+  buyer_cpf_id                  String?
+  buyer_user_id                 Int?
+  buyer_username                String?
+  cancel_by                     String?
+  cancel_reason                 String?
+  cod                           Boolean?
+  create_time                   Int?
+  currency                      String?
+  days_to_ship                  Int?
+  dropshipper                   String?
+  edt_from                      Int?
+  edt_to                        Int?
+  estimated_shipping_fee        Int?
+  fulfillment_flag              String?
+  goods_to_declare              Boolean?
+  invoice_data                  Json?
+  message_to_seller             String?  @db.Text
+  note                          String?
+  note_update_time              Int?
+  order_chargeable_weight_gram  Int?
+  pay_time                      Int?
+  payment_method                String?
+  pickup_done_time              Int?
+  region                        String?
+  reverse_shipping_fee          Int?
+  ship_by_date                  Int?
+  shipping_carrier              String?
+  split_up                      Boolean?
+  total_amount                  Int?
+  // 
 
+  buyer_address BuyerAddress?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  // 
   // Relasi: Setiap Order dimiliki oleh SATU Shop
+  shopId          Int
+  shop            Shop            @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
+  order_item      OrderItem[]
+  order_package   OrderPackage[]
+  order_print_log OrderPrintLog[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                     Int     @id @default(autoincrement())
+  // orderItemId            Int    @unique
+  itemId                 BigInt
+  itemName               String?
+  itemSku                String?
+  modelId                Int?
+  modelName              String?
+  modelSku               String?
+  modelQuantityPurchased Int?
+  modelDiscountedPrice   Float?
+  modelOriginalPrice     Float?
+  imageUrl               String?
+  weight                 Float?
+  promotionType          String?
+  order                  Order   @relation(fields: [orderSn], references: [orderSn])
+  orderSn                String
+
+  @@unique([orderSn, itemId]) // buat index biar query cepat
+  @@map("order_items")
+}
+
+model OrderPackage {
+  id                         Int           @id @default(autoincrement())
+  packageNumber              String        @unique
+  groupShipmentId            String?
+  logisticsStatus            String?
+  shippingCarrier            String?
+  parcelChargeableWeightGram Int?
+  allowSelfDesignAwb         Boolean?
+  logisticsChannelId         Int?
+  sortingGroup               String?
+  order                      Order         @relation(fields: [orderSn], references: [orderSn])
+  orderSn                    String
+  items                      PackageItem[] // 1:N ke package item
+
+  @@map("order_package")
+}
+
+model PackageItem {
+  id                Int          @id @default(autoincrement())
+  itemId            Int?
+  modelId           Int?
+  modelQuantity     Int?
+  orderItemId       Int?
+  promotionGroupId  Int?
+  productLocationId String?
+  package           OrderPackage @relation(fields: [packageId], references: [id])
+  packageId         Int
+
+  @@map("package_item")
+}
+
+model BuyerAddress {
+  id Int @id @default(autoincrement())
+
+  buyer_name        String
+  buyer_phone       String
+  buyer_town        String
+  buyer_district    String
+  buyer_city        String
+  buyer_state       String
+  buyer_region      String
+  buyer_zipcode     String
+  buyer_fullAddress String @db.Text
+
+  buyer_orderSn String @unique
+  order         Order  @relation(fields: [buyer_orderSn], references: [orderSn])
+
+  @@map("buyer_address")
+}
+
+model Item {
+  id      Int    @id @default(autoincrement())
+  item_id String @unique // 'order_sn' dari Shopee
+  name    String
+
   shopId Int
-  shop   Shop @relation(fields: [shopId], references: [shopId])
+  shop   Shop @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
+
+  @@map("items")
+}
+
+model OrderPrintLog {
+  id        Int      @id @default(autoincrement())
+  orderSn   String // nomor order
+  printedAt DateTime @default(now()) // waktu cetak
+
+  order Order @relation(fields: [orderSn], references: [orderSn])
+
+  @@map("order_print_log")
 }
 
 // ############################ ORDER PUSH
@@ -130,6 +277,8 @@ model WebhookLog {
   msgId     String?
   partnerId Int?
   data      Json
+
+  @@map("webhook_log")
 }
 
 // 3
@@ -144,6 +293,8 @@ model OrderStatusLog {
   status             String?
   completed_scenario String?
   update_time        Int?
+
+  @@map("log_order_status")
 }
 
 // 4
@@ -158,6 +309,8 @@ model OrderTrackingLog {
   forder_id      String?
   package_number String?
   tracking_no    String?
+
+  @@map("log_order_tracking")
 }
 
 // 15
@@ -171,6 +324,8 @@ model ShippingDocumentStatusLog {
   ordersn        String?
   package_number String?
   status         String?
+
+  @@map("log_shipping_document_status")
 }
 
 // 23
@@ -184,6 +339,8 @@ model BookingStatusPush {
   bookingSn     String?
   bookingStatus String?
   updateTime    String?
+
+  @@map("log_booking_status")
 }
 
 // 24
@@ -196,6 +353,8 @@ model BookingTrackingNoPush {
 
   bookingSn      String?
   trackingNumber String?
+
+  @@map("log_booking_tracking_no")
 }
 
 // 25
@@ -208,6 +367,8 @@ model BookingShippingDocumentStatusPush {
 
   bookingSn String?
   status    String?
+
+  @@map("log_booking_shipping_document_status")
 }
 
 // 30
@@ -222,6 +383,8 @@ model PackageFulfilmentStatusPush {
   package_number   String?
   fulfilmentStatus String?
   updateTime       String?
+
+  @@map("log_package_fulfilment_status")
 }
 
 // 37
@@ -236,6 +399,8 @@ model CourierDeliveryBindingStatusPush {
   first_mile_tracking_number String?
   status                     String?
   update_time                Int?
+
+  @@map("log_courier_delivery_binding_status")
 }
 
 // ############################ SHOPEE PUSH✅
@@ -252,6 +417,8 @@ model OpenApiAuthorizationExp {
   expire_before        Int?
   page_no              Int?
   total_page           Int?
+
+  @@map("log_authorization_exp")
 }
 
 // shop_authorization_push 1
@@ -270,6 +437,8 @@ model ShopAuthorizationPush {
   extra            String?
   main_account_id  Int?
   success          Int?
+
+  @@map("log_authorization_push")
 }
 
 // shop_authorization_canceled_push 2
@@ -288,6 +457,8 @@ model ShopAuthorizationCanceledPush {
   extra            String?
   main_account_id  Int?
   success          Int?
+
+  @@map("log_authorization_canceled")
 }
 
 // ############################ PRODUK PUSH✅
@@ -308,6 +479,8 @@ model ReservedStockChangePush {
   action         String?
   ordersn        String?
   update_time    Int?
+
+  @@map("log_reserved_stock_change")
 }
 
 // item_price_update_push
@@ -324,4 +497,26 @@ model ItemPriceUpdatePush {
   old_value    Int?
   new_value    Int?
   update_time  Int?
+
+  @@map("log_item_price_update")
+}
+
+model LogisticChannel {
+  id                     Int    @id @default(autoincrement())
+  logistics_channel_id   Int    @unique
+  logistics_channel_name String
+
+  size_list            Json?
+  weight_limit         Json?
+  item_max_dimension   Json?
+  volume_limit         Json?
+  logistics_capability Json?
+
+  logistics_description String? @db.Text
+
+  support_cross_border            Boolean?
+  block_seller_cover_shipping_fee Boolean?
+  support_pre_order               Boolean?
+
+  @@map("logisitcs_channel")
 }
